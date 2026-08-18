@@ -158,7 +158,30 @@ un calendario simulado en memoria (no toca WhatsApp ni Google Calendar reales).
 - Fuera de alcance: automatizar el alta/verificación de la cuenta de WhatsApp
   Business ante Meta.
 
-## 7. Testing y despliegue
+## 7. Identidad visual
+
+El panel reutiliza la identidad de marca de `jctech-landing`, no el estilo genérico
+azul/blanco de las capturas de referencia (AILINK). Mismos tokens que la landing:
+
+- **Tipografía**: `Fraunces` (serif, weight 600) para títulos (h1/h2/h3 y cifras
+  destacadas como las tarjetas del Dashboard); `Karla` (sans, 400/600) para el resto
+  del texto.
+- **Colores**: `--color-hueso` (#f3efe7, fondo), `--color-hueso-hondo` (#e8e2d6,
+  fondos secundarios/tarjetas), `--color-tinta` (#17150f, texto principal y bordes),
+  `--color-tinta-suave` (#4a463c, texto secundario), `--color-bermellon` (#c0451f,
+  acento — sustituye al azul de las capturas para focos, toggles activos, alertas),
+  `--color-oliva` (#5b6249, acento secundario, ej. estados "conectado").
+- **Botones**: sólido negro (`--color-tinta`) sobre hueso para acciones primarias
+  (Guardar, Cuéntame tu caso), outline para secundarias (Ver precios, Probar agente),
+  con las mismas transiciones de 150ms.
+- El sidebar y las tarjetas del panel mantienen la estructura de las capturas
+  (layout, jerarquía, componentes) pero con esta paleta y tipografía en vez de la
+  original.
+- Se reutilizan los mismos archivos de fuente (`/fonts/fraunces-600.woff2`,
+  `/fonts/karla-400.woff2`, `/fonts/karla-600.woff2`) y el mismo `@theme` de Tailwind
+  que ya existe en `jctech-landing/src/styles/global.css`, copiado al nuevo proyecto.
+
+## 8. Testing y despliegue
 
 - Despliegue en Vercel; variables de entorno para Supabase, Anthropic, Google OAuth
   y clave de cifrado de credenciales.
