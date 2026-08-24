@@ -34,7 +34,12 @@ export async function middleware(request: NextRequest) {
   // añadida aquí sin añadirla también a matcher quedaría sin proteger.
   const isProtected =
     request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/onboarding");
+    request.nextUrl.pathname.startsWith("/onboarding") ||
+    request.nextUrl.pathname.startsWith("/conversaciones") ||
+    request.nextUrl.pathname.startsWith("/citas") ||
+    request.nextUrl.pathname.startsWith("/personalizacion") ||
+    request.nextUrl.pathname.startsWith("/integraciones") ||
+    request.nextUrl.pathname.startsWith("/select-business");
 
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone();
@@ -47,5 +52,13 @@ export async function middleware(request: NextRequest) {
 
 // Debe reflejar el mismo conjunto de rutas que isProtected más arriba.
 export const config = {
-  matcher: ["/dashboard/:path*", "/onboarding"],
+  matcher: [
+    "/dashboard/:path*",
+    "/onboarding",
+    "/conversaciones/:path*",
+    "/citas/:path*",
+    "/personalizacion/:path*",
+    "/integraciones/:path*",
+    "/select-business",
+  ],
 };
