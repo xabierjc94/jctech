@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 
@@ -6,18 +6,31 @@ config({ path: ".env.local" });
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// El proyecto de Supabase rechaza altas por signUp con dominios de prueba y
+// aplica límite de tasa, así que los usuarios se crean con service_role. La
+// consulta que se está verificando sigue haciéndose con el cliente anon
+// autenticado como el usuario, que es el camino que recorre la app real.
+const admin = createClient(url, serviceRoleKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 function uniqueEmail(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+  return `${prefix}-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}@example.com`;
 }
 
 async function signUpAndCreateBusiness(email: string, businessName: string) {
-  const client = createClient(url, anonKey);
   const password = "Test1234!";
 
-  const { error: signUpError } = await client.auth.signUp({ email, password });
-  if (signUpError) throw signUpError;
+  const { data: created, error: createError } = await admin.auth.admin.createUser(
+    { email, password, email_confirm: true }
+  );
+  if (createError) throw createError;
 
+  const client = createClient(url, anonKey);
   const { data: signInData, error: signInError } =
     await client.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
@@ -28,20 +41,27 @@ async function signUpAndCreateBusiness(email: string, businessName: string) {
   );
   if (rpcError) throw rpcError;
 
-  return { client, businessId: businessId as string, userId: signInData.user!.id };
+  return {
+    client,
+    businessId: businessId as string,
+    userId: created.user!.id,
+  };
 }
 
 describe("aislamiento RLS entre negocios", () => {
-  // TODO: no hay limpieza (afterAll) — cada ejecución deja usuarios de auth
-  // y filas de businesses permanentes en la base local. Aceptable mientras
-  // sea una suite pequeña contra Supabase local, pero añadir limpieza antes
-  // de que esta suite crezca o se apunte a una base compartida/CI.
   let a: Awaited<ReturnType<typeof signUpAndCreateBusiness>>;
   let b: Awaited<ReturnType<typeof signUpAndCreateBusiness>>;
 
   beforeAll(async () => {
     a = await signUpAndCreateBusiness(uniqueEmail("owner-a"), "Negocio A");
     b = await signUpAndCreateBusiness(uniqueEmail("owner-b"), "Negocio B");
+  });
+
+  afterAll(async () => {
+    // Borrar el usuario arrastra su negocio y su membresía por cascada.
+    for (const user of [a, b]) {
+      if (user?.userId) await admin.auth.admin.deleteUser(user.userId);
+    }
   });
 
   it("un usuario puede leer su propio negocio", async () => {
