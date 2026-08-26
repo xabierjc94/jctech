@@ -8,6 +8,10 @@
 
 **Tech Stack:** Next.js 16 (App Router, Server Actions), TypeScript, Tailwind CSS v4, Supabase (Postgres + RLS).
 
+> **Restricción de Next.js a tener presente en toda esta fase:** un archivo con `"use server"` **solo puede exportar funciones async**. Exportar una constante desde `actions.ts` compila con `tsc` pero rompe `next build` con *"A 'use server' file can only export async functions, found object"*. Por eso `TONES` vive en `app/(dashboard)/personalizacion/tones.ts` y no en `actions.ts`. Cualquier constante compartida nueva debe ir a un archivo aparte sin `"use server"`.
+
+> **Entorno de verificación:** el proyecto usa **Supabase en la nube** (sin Docker). Para probar en navegador: usar el puerto **3005** y **build de producción** (`npm run build && npx next start -p 3005`) — en `next dev` las Server Actions fallan con error `E394`. Usuario de prueba con negocio ya creado: `dev@jctech.local` / `DevPanel1234!`.
+
 **Ver también:**
 - Spec completo: `docs/superpowers/specs/2026-08-18-panel-clientes-design.md` (sección 4, pestaña Personalización)
 - Fase 1 (completada): `docs/superpowers/plans/2026-08-18-fase1-fundamentos.md`
