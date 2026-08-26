@@ -131,3 +131,15 @@ export function zonedParts(instant: Date): {
     dayOfWeek: WEEKDAY_INDEX[p.weekday] ?? 0,
   };
 }
+
+/** Formatea un instante como fecha y hora legibles en Madrid. */
+export function formatDateTime(instant: Date): string {
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(instant);
+}
