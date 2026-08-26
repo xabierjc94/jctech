@@ -58,3 +58,59 @@ export async function saveGeneral(formData: FormData) {
 
   done("general");
 }
+
+const MAX_BUSINESS_NAME_LENGTH = 100;
+const MAX_ADDRESS_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 1000;
+
+export async function saveNegocio(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+
+  if (!name || name.length > MAX_BUSINESS_NAME_LENGTH) {
+    fail(
+      "negocio",
+      `El nombre debe tener entre 1 y ${MAX_BUSINESS_NAME_LENGTH} caracteres.`
+    );
+  }
+
+  if (address.length > MAX_ADDRESS_LENGTH) {
+    fail("negocio", `La dirección no puede superar ${MAX_ADDRESS_LENGTH} caracteres.`);
+  }
+
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    fail(
+      "negocio",
+      `La descripción no puede superar ${MAX_DESCRIPTION_LENGTH} caracteres.`
+    );
+  }
+
+  const supabase = await createClient();
+  const { data: business, error: readError } = await supabase
+    .from("businesses")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (readError || !business) {
+    fail("negocio", "No se pudo guardar. Inténtalo de nuevo.");
+  }
+
+  const { error } = await supabase
+    .from("businesses")
+    .update({
+      name,
+      email: email || null,
+      address: address || null,
+      description: description || null,
+    })
+    .eq("id", business.id);
+
+  if (error) {
+    fail("negocio", "No se pudo guardar. Inténtalo de nuevo.");
+  }
+
+  done("negocio");
+}

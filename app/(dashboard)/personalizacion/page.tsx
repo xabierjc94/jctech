@@ -1,6 +1,7 @@
 import { Tabs, isTabId, type TabId } from "./tabs";
 import { getActiveBusiness } from "@/lib/business";
 import { GeneralTab } from "./general-tab";
+import { NegocioTab } from "./negocio-tab";
 
 export default async function PersonalizacionPage({
   searchParams,
@@ -32,7 +33,8 @@ export default async function PersonalizacionPage({
       )}
 
       {active === "general" && <GeneralTab business={business} />}
-      {active !== "general" && (
+      {active === "negocio" && <NegocioTab business={business} />}
+      {active !== "general" && active !== "negocio" && (
         <p className="text-tinta-suave">Pestaña: {active}</p>
       )}
     </>
