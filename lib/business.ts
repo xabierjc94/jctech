@@ -28,23 +28,30 @@ export type Business = {
   ask_new_patient: boolean;
 };
 
+const BUSINESS_COLUMNS =
+  "id, name, email, tone, base_prompt, address, description, ask_new_patient";
+
 export async function getActiveBusiness(): Promise<Business> {
   const supabase = await createClient();
   const activeId = await readActiveBusinessId();
 
-  let query = supabase
-    .from("businesses")
-    .select(
-      "id, name, email, tone, base_prompt, address, description, ask_new_patient"
-    );
-
   if (activeId) {
-    query = query.eq("id", activeId);
+    const { data } = await supabase
+      .from("businesses")
+      .select(BUSINESS_COLUMNS)
+      .eq("id", activeId)
+      .limit(1);
+
+    if (data && data.length > 0) return data[0] as Business;
+    // Cookie obsoleta: se ignora y se cae al primer negocio del usuario.
   }
 
-  // Sin cookie (o con una cookie obsoleta) se cae al primer negocio del
-  // usuario. RLS ya limita el conjunto a los negocios de los que es miembro.
-  const { data, error } = await query.order("created_at").limit(1);
+  // RLS ya limita el conjunto a los negocios de los que el usuario es miembro.
+  const { data, error } = await supabase
+    .from("businesses")
+    .select(BUSINESS_COLUMNS)
+    .order("created_at")
+    .limit(1);
 
   if (error) throw error;
   if (!data || data.length === 0) throw new Error("Sin negocio activo");
@@ -61,13 +68,23 @@ export async function getActiveBusinessId(): Promise<string | null> {
   const supabase = await createClient();
   const activeId = await readActiveBusinessId();
 
-  let query = supabase.from("businesses").select("id");
-
   if (activeId) {
-    query = query.eq("id", activeId);
+    const { data } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("id", activeId)
+      .limit(1);
+
+    if (data && data.length > 0) return data[0].id as string;
+    // Cookie obsoleta (negocio borrado o ya no accesible): se ignora y se cae
+    // al primer negocio del usuario, igual que hace el layout del dashboard.
   }
 
-  const { data, error } = await query.order("created_at").limit(1);
+  const { data, error } = await supabase
+    .from("businesses")
+    .select("id")
+    .order("created_at")
+    .limit(1);
 
   if (error || !data || data.length === 0) return null;
 
