@@ -1,3 +1,34 @@
-export default function PersonalizacionPage() {
-  return <h1 className="text-2xl">Personalización</h1>;
+import { Tabs, isTabId, type TabId } from "./tabs";
+
+export default async function PersonalizacionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; error?: string; ok?: string }>;
+}) {
+  const params = await searchParams;
+  const active: TabId = isTabId(params.tab) ? params.tab : "general";
+
+  return (
+    <>
+      <h1 className="mb-1 text-2xl">Personalización</h1>
+      <p className="mb-6 text-tinta-suave">
+        Configura cómo se comporta tu agente y qué sabe de tu negocio.
+      </p>
+
+      <Tabs active={active} />
+
+      {params.error && (
+        <p className="mb-4 rounded border border-bermellon px-3 py-2 text-sm text-bermellon">
+          {params.error}
+        </p>
+      )}
+      {params.ok && (
+        <p className="mb-4 rounded border border-oliva px-3 py-2 text-sm text-oliva">
+          Cambios guardados.
+        </p>
+      )}
+
+      <p className="text-tinta-suave">Pestaña: {active}</p>
+    </>
+  );
 }
