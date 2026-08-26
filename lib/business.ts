@@ -52,6 +52,28 @@ export async function getActiveBusiness(): Promise<Business> {
   return data[0] as Business;
 }
 
+/**
+ * Id del negocio activo, resuelto igual que `getActiveBusiness` pero sin traer
+ * la fila entera. Devuelve `null` en vez de lanzar, para que las Server Actions
+ * puedan responder con su propio mensaje de error.
+ */
+export async function getActiveBusinessId(): Promise<string | null> {
+  const supabase = await createClient();
+  const activeId = await readActiveBusinessId();
+
+  let query = supabase.from("businesses").select("id");
+
+  if (activeId) {
+    query = query.eq("id", activeId);
+  }
+
+  const { data, error } = await query.order("created_at").limit(1);
+
+  if (error || !data || data.length === 0) return null;
+
+  return data[0].id as string;
+}
+
 export type BusinessHour = {
   id: string;
   day_of_week: number;
@@ -60,10 +82,14 @@ export type BusinessHour = {
 };
 
 export async function getBusinessHours(): Promise<BusinessHour[]> {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return [];
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("business_hours")
     .select("id, day_of_week, start_time, end_time")
+    .eq("business_id", businessId)
     .order("day_of_week")
     .order("start_time");
 
@@ -80,10 +106,14 @@ export type Service = {
 };
 
 export async function getServices(): Promise<Service[]> {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return [];
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("services")
     .select("id, slug, name, description, duration_minutes")
+    .eq("business_id", businessId)
     .order("name");
 
   if (error) throw error;
@@ -116,10 +146,14 @@ export const MESSAGE_TEMPLATES = [
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATES)[number]["key"];
 
 export async function getMessageTemplates(): Promise<Record<string, string>> {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return {};
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("message_templates")
-    .select("key, content");
+    .select("key, content")
+    .eq("business_id", businessId);
 
   if (error) throw error;
 

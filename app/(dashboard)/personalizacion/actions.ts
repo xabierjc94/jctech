@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TONES } from "./tones";
-import { MESSAGE_TEMPLATES } from "@/lib/business";
+import { MESSAGE_TEMPLATES, getActiveBusinessId } from "@/lib/business";
 
 const MAX_BASE_PROMPT_LENGTH = 5000;
 
@@ -33,16 +33,13 @@ export async function saveGeneral(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
-  const { data: business, error: readError } = await supabase
-    .from("businesses")
-    .select("id")
-    .limit(1)
-    .single();
+  const businessId = await getActiveBusinessId();
 
-  if (readError || !business) {
+  if (!businessId) {
     fail("general", "No se pudo guardar. Inténtalo de nuevo.");
   }
+
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from("businesses")
@@ -51,7 +48,7 @@ export async function saveGeneral(formData: FormData) {
       base_prompt: basePrompt,
       ask_new_patient: askNewPatient,
     })
-    .eq("id", business.id);
+    .eq("id", businessId);
 
   if (error) {
     fail("general", "No se pudo guardar. Inténtalo de nuevo.");
@@ -88,16 +85,13 @@ export async function saveNegocio(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
-  const { data: business, error: readError } = await supabase
-    .from("businesses")
-    .select("id")
-    .limit(1)
-    .single();
+  const businessId = await getActiveBusinessId();
 
-  if (readError || !business) {
+  if (!businessId) {
     fail("negocio", "No se pudo guardar. Inténtalo de nuevo.");
   }
+
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from("businesses")
@@ -107,7 +101,7 @@ export async function saveNegocio(formData: FormData) {
       address: address || null,
       description: description || null,
     })
-    .eq("id", business.id);
+    .eq("id", businessId);
 
   if (error) {
     fail("negocio", "No se pudo guardar. Inténtalo de nuevo.");
@@ -135,19 +129,16 @@ export async function addBusinessHour(formData: FormData) {
     fail("horarios", "La hora de fin debe ser posterior a la de inicio.");
   }
 
-  const supabase = await createClient();
-  const { data: business, error: readError } = await supabase
-    .from("businesses")
-    .select("id")
-    .limit(1)
-    .single();
+  const businessId = await getActiveBusinessId();
 
-  if (readError || !business) {
+  if (!businessId) {
     fail("horarios", "No se pudo guardar. Inténtalo de nuevo.");
   }
 
+  const supabase = await createClient();
+
   const { error } = await supabase.from("business_hours").insert({
-    business_id: business.id,
+    business_id: businessId,
     day_of_week: dayOfWeek,
     start_time: startTime,
     end_time: endTime,
@@ -227,19 +218,16 @@ export async function addService(formData: FormData) {
     fail("servicios", "El nombre debe contener al menos una letra o número.");
   }
 
-  const supabase = await createClient();
-  const { data: business, error: readError } = await supabase
-    .from("businesses")
-    .select("id")
-    .limit(1)
-    .single();
+  const businessId = await getActiveBusinessId();
 
-  if (readError || !business) {
+  if (!businessId) {
     fail("servicios", "No se pudo guardar. Inténtalo de nuevo.");
   }
 
+  const supabase = await createClient();
+
   const { error } = await supabase.from("services").insert({
-    business_id: business.id,
+    business_id: businessId,
     slug,
     name,
     description: description || null,
@@ -293,19 +281,16 @@ export async function saveMessageTemplates(formData: FormData) {
     rows.push({ key: template.key, content });
   }
 
-  const supabase = await createClient();
-  const { data: business, error: readError } = await supabase
-    .from("businesses")
-    .select("id")
-    .limit(1)
-    .single();
+  const businessId = await getActiveBusinessId();
 
-  if (readError || !business) {
+  if (!businessId) {
     fail("mensajes", "No se pudo guardar. Inténtalo de nuevo.");
   }
 
+  const supabase = await createClient();
+
   const { error } = await supabase.from("message_templates").upsert(
-    rows.map((row) => ({ ...row, business_id: business.id })),
+    rows.map((row) => ({ ...row, business_id: businessId })),
     { onConflict: "business_id,key" }
   );
 

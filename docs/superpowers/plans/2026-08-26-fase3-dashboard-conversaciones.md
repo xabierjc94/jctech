@@ -443,6 +443,7 @@ git commit -m "Añade utilidades de fecha con zona horaria de Madrid"
 
 ```ts
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/business";
 
 export type Conversation = {
   id: string;
@@ -459,26 +460,24 @@ export type Message = {
   created_at: string;
 };
 
-export async function getConversations(): Promise<Conversation[]> {
+export async function getConversations(
+  limit?: number
+): Promise<Conversation[]> {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return [];
+
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("conversations")
     .select("id, contact_name, contact_phone, bot_active, last_message_at")
+    .eq("business_id", businessId)
     .order("last_message_at", { ascending: false });
 
-  if (error) throw error;
-  return (data ?? []) as Conversation[];
-}
+  if (limit) {
+    query = query.limit(limit);
+  }
 
-export async function getRecentConversations(
-  limit: number
-): Promise<Conversation[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("conversations")
-    .select("id, contact_name, contact_phone, bot_active, last_message_at")
-    .order("last_message_at", { ascending: false })
-    .limit(limit);
+  const { data, error } = await query;
 
   if (error) throw error;
   return (data ?? []) as Conversation[];
@@ -487,10 +486,14 @@ export async function getRecentConversations(
 export async function getConversation(
   id: string
 ): Promise<Conversation | null> {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return null;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("conversations")
     .select("id, contact_name, contact_phone, bot_active, last_message_at")
+    .eq("business_id", businessId)
     .eq("id", id)
     .limit(1);
 
@@ -499,6 +502,11 @@ export async function getConversation(
 }
 
 export async function getMessages(conversationId: string): Promise<Message[]> {
+  // La conversación se resuelve primero para confirmar que pertenece al
+  // negocio activo; así un id de otro negocio del usuario no filtra mensajes.
+  const conversation = await getConversation(conversationId);
+  if (!conversation) return [];
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("messages")
@@ -511,7 +519,9 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
 }
 ```
 
-Nota: ninguna consulta filtra por `business_id` explícitamente porque RLS ya lo hace. Un `id` de otro negocio simplemente no devuelve filas.
+**Importante — por qué se filtra explícitamente por `business_id`:** RLS limita las filas a los negocios de los que el usuario **es miembro**, que no es lo mismo que el negocio **activo**. Un usuario con dos negocios vería datos mezclados si solo se confiara en RLS. Esta lección salió de un bug real detectado al verificar el Task 1, donde la pestaña de Servicios mostraba los servicios del otro negocio. Todas las lecturas nuevas deben filtrar por el negocio activo, además de apoyarse en RLS.
+
+Nota: `getConversations(5)` sustituye a la función `getRecentConversations` que aparecía en versiones previas de este plan; el Dashboard la llama con el límite y la pantalla de Conversaciones sin él.
 
 - [ ] **Step 2: Crear el lector de métricas**
 
@@ -519,6 +529,7 @@ Nota: ninguna consulta filtra por `business_id` explícitamente porque RLS ya lo
 
 ```ts
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/business";
 import { daysAgo, todayRange, weekRange } from "@/lib/dates";
 
 export type DashboardMetrics = {
@@ -528,7 +539,17 @@ export type DashboardMetrics = {
   pausedBots: number;
 };
 
+const EMPTY_METRICS: DashboardMetrics = {
+  conversations30d: 0,
+  appointmentsThisWeek: 0,
+  appointmentsToday: 0,
+  pausedBots: 0,
+};
+
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return EMPTY_METRICS;
+
   const supabase = await createClient();
   const today = todayRange();
   const week = weekRange();
@@ -538,22 +559,26 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       supabase
         .from("conversations")
         .select("*", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .gte("last_message_at", daysAgo(30).toISOString()),
       supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .neq("status", "cancelada")
         .gte("starts_at", week.from.toISOString())
         .lt("starts_at", week.to.toISOString()),
       supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .neq("status", "cancelada")
         .gte("starts_at", today.from.toISOString())
         .lt("starts_at", today.to.toISOString()),
       supabase
         .from("conversations")
         .select("*", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .eq("bot_active", false),
     ]);
 
@@ -807,14 +832,14 @@ Nota: la clase `cifra` ya existe en `globals.css` y aplica la tipografía Fraunc
 ```tsx
 import Link from "next/link";
 import { getDashboardMetrics } from "@/lib/metrics";
-import { getRecentConversations } from "@/lib/conversations";
+import { getConversations } from "@/lib/conversations";
 import { formatShortDate, formatTime } from "@/lib/dates";
 import { MetricCard } from "./metric-card";
 
 export default async function DashboardPage() {
   const [metrics, conversations] = await Promise.all([
     getDashboardMetrics(),
-    getRecentConversations(5),
+    getConversations(5),
   ]);
 
   return (
