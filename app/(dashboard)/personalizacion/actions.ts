@@ -114,3 +114,64 @@ export async function saveNegocio(formData: FormData) {
 
   done("negocio");
 }
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export async function addBusinessHour(formData: FormData) {
+  const dayOfWeek = Number(formData.get("day_of_week"));
+  const startTime = String(formData.get("start_time") ?? "");
+  const endTime = String(formData.get("end_time") ?? "");
+
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    fail("horarios", "Selecciona un día válido.");
+  }
+
+  if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) {
+    fail("horarios", "Introduce horas válidas en formato HH:MM.");
+  }
+
+  if (startTime >= endTime) {
+    fail("horarios", "La hora de fin debe ser posterior a la de inicio.");
+  }
+
+  const supabase = await createClient();
+  const { data: business, error: readError } = await supabase
+    .from("businesses")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (readError || !business) {
+    fail("horarios", "No se pudo guardar. Inténtalo de nuevo.");
+  }
+
+  const { error } = await supabase.from("business_hours").insert({
+    business_id: business.id,
+    day_of_week: dayOfWeek,
+    start_time: startTime,
+    end_time: endTime,
+  });
+
+  if (error) {
+    fail("horarios", "No se pudo guardar. Inténtalo de nuevo.");
+  }
+
+  done("horarios");
+}
+
+export async function deleteBusinessHour(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+
+  if (!id) {
+    fail("horarios", "No se pudo eliminar el rango.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("business_hours").delete().eq("id", id);
+
+  if (error) {
+    fail("horarios", "No se pudo eliminar el rango.");
+  }
+
+  done("horarios");
+}

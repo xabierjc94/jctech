@@ -40,3 +40,22 @@ export async function getActiveBusiness(): Promise<Business> {
   if (error) throw error;
   return data as Business;
 }
+
+export type BusinessHour = {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+};
+
+export async function getBusinessHours(): Promise<BusinessHour[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("business_hours")
+    .select("id, day_of_week, start_time, end_time")
+    .order("day_of_week")
+    .order("start_time");
+
+  if (error) throw error;
+  return (data ?? []) as BusinessHour[];
+}
