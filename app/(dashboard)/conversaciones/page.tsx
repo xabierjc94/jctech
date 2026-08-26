@@ -6,6 +6,7 @@ import {
 import { ConversationList } from "./conversation-list";
 import { MessageThread } from "./message-thread";
 import { BotToggle } from "./bot-toggle";
+import { sendHumanMessage } from "./actions";
 
 export default async function ConversacionesPage({
   searchParams,
@@ -58,6 +59,28 @@ export default async function ConversacionesPage({
             <div className="flex-1 overflow-y-auto px-6 py-4">
               <MessageThread messages={messages} />
             </div>
+
+            <form
+              action={sendHumanMessage}
+              className="flex items-end gap-2 border-t border-tinta/20 px-6 py-4"
+            >
+              <input
+                type="hidden"
+                name="conversation_id"
+                value={conversation.id}
+              />
+              <textarea
+                name="content"
+                rows={2}
+                required
+                maxLength={1000}
+                placeholder="Escribe una respuesta…"
+                className="flex-1 border border-tinta bg-hueso px-3 py-2"
+              />
+              <button type="submit" className="bg-tinta px-4 py-2 text-hueso">
+                Enviar
+              </button>
+            </form>
           </>
         )}
       </div>

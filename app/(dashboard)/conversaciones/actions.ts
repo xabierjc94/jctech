@@ -40,3 +40,63 @@ export async function toggleBot(formData: FormData) {
   revalidatePath("/dashboard");
   redirect(`/conversaciones?c=${conversationId}`);
 }
+
+const MAX_MESSAGE_LENGTH = 1000;
+
+export async function sendHumanMessage(formData: FormData) {
+  const conversationId = String(formData.get("conversation_id") ?? "");
+  const content = String(formData.get("content") ?? "").trim();
+
+  if (!conversationId) {
+    redirect("/conversaciones");
+  }
+
+  if (!content) {
+    fail(conversationId, "Escribe un mensaje antes de enviarlo.");
+  }
+
+  if (content.length > MAX_MESSAGE_LENGTH) {
+    fail(
+      conversationId,
+      `El mensaje no puede superar ${MAX_MESSAGE_LENGTH} caracteres.`
+    );
+  }
+
+  // Confirma que la conversación pertenece al negocio activo antes de escribir.
+  const conversation = await getConversation(conversationId);
+
+  if (!conversation) {
+    redirect("/conversaciones");
+  }
+
+  const supabase = await createClient();
+  const sentAt = new Date().toISOString();
+
+  const { error: messageError } = await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    sender: "humano",
+    content,
+    created_at: sentAt,
+  });
+
+  if (messageError) {
+    fail(conversationId, "No se pudo enviar el mensaje.");
+  }
+
+  // Responder a mano pausa el bot: a partir de aquí atiende una persona.
+  const { error: conversationError } = await supabase
+    .from("conversations")
+    .update({ bot_active: false, last_message_at: sentAt })
+    .eq("id", conversationId);
+
+  if (conversationError) {
+    fail(conversationId, "No se pudo enviar el mensaje.");
+  }
+
+  // TODO (Fase 4): enviar también el mensaje por la WhatsApp Cloud API.
+  // Hasta entonces, el mensaje solo queda registrado en el panel.
+
+  revalidatePath("/conversaciones");
+  revalidatePath("/dashboard");
+  redirect(`/conversaciones?c=${conversationId}`);
+}
