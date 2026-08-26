@@ -5,6 +5,7 @@ import {
 } from "@/lib/conversations";
 import { ConversationList } from "./conversation-list";
 import { MessageThread } from "./message-thread";
+import { BotToggle } from "./bot-toggle";
 
 export default async function ConversacionesPage({
   searchParams,
@@ -35,11 +36,17 @@ export default async function ConversacionesPage({
 
         {conversation && (
           <>
-            <div className="border-b border-tinta/20 px-6 py-3">
-              <p>{conversation.contact_name ?? "Sin nombre"}</p>
-              <p className="text-sm text-tinta-suave">
-                {conversation.contact_phone}
-              </p>
+            <div className="flex items-center justify-between border-b border-tinta/20 px-6 py-3">
+              <div>
+                <p>{conversation.contact_name ?? "Sin nombre"}</p>
+                <p className="text-sm text-tinta-suave">
+                  {conversation.contact_phone}
+                </p>
+              </div>
+              <BotToggle
+                conversationId={conversation.id}
+                botActive={conversation.bot_active}
+              />
             </div>
 
             {params.error && (
