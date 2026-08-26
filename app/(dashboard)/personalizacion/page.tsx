@@ -1,4 +1,6 @@
 import { Tabs, isTabId, type TabId } from "./tabs";
+import { getActiveBusiness } from "@/lib/business";
+import { GeneralTab } from "./general-tab";
 
 export default async function PersonalizacionPage({
   searchParams,
@@ -7,6 +9,7 @@ export default async function PersonalizacionPage({
 }) {
   const params = await searchParams;
   const active: TabId = isTabId(params.tab) ? params.tab : "general";
+  const business = await getActiveBusiness();
 
   return (
     <>
@@ -28,7 +31,10 @@ export default async function PersonalizacionPage({
         </p>
       )}
 
-      <p className="text-tinta-suave">Pestaña: {active}</p>
+      {active === "general" && <GeneralTab business={business} />}
+      {active !== "general" && (
+        <p className="text-tinta-suave">Pestaña: {active}</p>
+      )}
     </>
   );
 }
