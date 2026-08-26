@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TONES } from "./tones";
+import { MESSAGE_TEMPLATES } from "@/lib/business";
 
 const MAX_BASE_PROMPT_LENGTH = 5000;
 
@@ -272,4 +273,45 @@ export async function deleteService(formData: FormData) {
   }
 
   done("servicios");
+}
+
+const MAX_TEMPLATE_LENGTH = 1000;
+
+export async function saveMessageTemplates(formData: FormData) {
+  const rows: { key: string; content: string }[] = [];
+
+  for (const template of MESSAGE_TEMPLATES) {
+    const content = String(formData.get(template.key) ?? "").trim();
+
+    if (content.length > MAX_TEMPLATE_LENGTH) {
+      fail(
+        "mensajes",
+        `"${template.label}" no puede superar ${MAX_TEMPLATE_LENGTH} caracteres.`
+      );
+    }
+
+    rows.push({ key: template.key, content });
+  }
+
+  const supabase = await createClient();
+  const { data: business, error: readError } = await supabase
+    .from("businesses")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (readError || !business) {
+    fail("mensajes", "No se pudo guardar. Inténtalo de nuevo.");
+  }
+
+  const { error } = await supabase.from("message_templates").upsert(
+    rows.map((row) => ({ ...row, business_id: business.id })),
+    { onConflict: "business_id,key" }
+  );
+
+  if (error) {
+    fail("mensajes", "No se pudo guardar. Inténtalo de nuevo.");
+  }
+
+  done("mensajes");
 }

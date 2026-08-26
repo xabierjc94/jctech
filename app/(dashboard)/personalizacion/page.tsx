@@ -1,9 +1,15 @@
 import { Tabs, isTabId, type TabId } from "./tabs";
-import { getActiveBusiness, getBusinessHours, getServices } from "@/lib/business";
+import {
+  getActiveBusiness,
+  getBusinessHours,
+  getServices,
+  getMessageTemplates,
+} from "@/lib/business";
 import { GeneralTab } from "./general-tab";
 import { NegocioTab } from "./negocio-tab";
 import { HorariosTab } from "./horarios-tab";
 import { ServiciosTab } from "./servicios-tab";
+import { MensajesTab } from "./mensajes-tab";
 
 export default async function PersonalizacionPage({
   searchParams,
@@ -15,6 +21,7 @@ export default async function PersonalizacionPage({
   const business = await getActiveBusiness();
   const hours = active === "horarios" ? await getBusinessHours() : [];
   const services = active === "servicios" ? await getServices() : [];
+  const templates = active === "mensajes" ? await getMessageTemplates() : {};
 
   return (
     <>
@@ -40,9 +47,7 @@ export default async function PersonalizacionPage({
       {active === "negocio" && <NegocioTab business={business} />}
       {active === "horarios" && <HorariosTab hours={hours} />}
       {active === "servicios" && <ServiciosTab services={services} />}
-      {active === "mensajes" && (
-        <p className="text-tinta-suave">Pestaña: {active}</p>
-      )}
+      {active === "mensajes" && <MensajesTab templates={templates} />}
     </>
   );
 }

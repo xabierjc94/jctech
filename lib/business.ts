@@ -78,3 +78,41 @@ export async function getServices(): Promise<Service[]> {
   if (error) throw error;
   return (data ?? []) as Service[];
 }
+
+export const MESSAGE_TEMPLATES = [
+  {
+    key: "saludo",
+    label: "Saludo inicial",
+    hint: "Primer mensaje cuando alguien escribe por primera vez.",
+  },
+  {
+    key: "fuera_de_horario",
+    label: "Fuera de horario",
+    hint: "Respuesta cuando escriben fuera del horario de atención.",
+  },
+  {
+    key: "confirmacion_cita",
+    label: "Confirmación de cita",
+    hint: "Mensaje al confirmar una cita agendada.",
+  },
+  {
+    key: "traspaso_humano",
+    label: "Traspaso a persona",
+    hint: "Mensaje al pasar la conversación a una persona del equipo.",
+  },
+] as const;
+
+export type MessageTemplateKey = (typeof MESSAGE_TEMPLATES)[number]["key"];
+
+export async function getMessageTemplates(): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("message_templates")
+    .select("key, content");
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data ?? []).map((row) => [row.key as string, row.content as string])
+  );
+}
