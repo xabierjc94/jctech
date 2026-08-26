@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUserBusinesses } from "@/lib/business";
+import { readActiveBusinessId } from "@/lib/active-business";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -21,11 +22,16 @@ export default async function DashboardLayout({
     redirect("/onboarding");
   }
 
-  if (businesses.length > 1) {
+  const activeId = await readActiveBusinessId();
+  const membership =
+    businesses.find((m) => m.business_id === activeId) ??
+    (businesses.length === 1 ? businesses[0] : null);
+
+  if (!membership) {
     redirect("/select-business");
   }
 
-  const business = businesses[0].businesses;
+  const business = membership.businesses;
 
   return (
     <div className="flex min-h-screen">

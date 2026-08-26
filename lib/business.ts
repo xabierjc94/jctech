@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { readActiveBusinessId } from "@/lib/active-business";
 
 export type BusinessMembership = {
   business_id: string;
@@ -29,16 +30,26 @@ export type Business = {
 
 export async function getActiveBusiness(): Promise<Business> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const activeId = await readActiveBusinessId();
+
+  let query = supabase
     .from("businesses")
     .select(
       "id, name, email, tone, base_prompt, address, description, ask_new_patient"
-    )
-    .limit(1)
-    .single();
+    );
+
+  if (activeId) {
+    query = query.eq("id", activeId);
+  }
+
+  // Sin cookie (o con una cookie obsoleta) se cae al primer negocio del
+  // usuario. RLS ya limita el conjunto a los negocios de los que es miembro.
+  const { data, error } = await query.order("created_at").limit(1);
 
   if (error) throw error;
-  return data as Business;
+  if (!data || data.length === 0) throw new Error("Sin negocio activo");
+
+  return data[0] as Business;
 }
 
 export type BusinessHour = {
