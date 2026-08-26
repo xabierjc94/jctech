@@ -15,3 +15,28 @@ export async function getUserBusinesses(): Promise<BusinessMembership[]> {
   if (error) throw error;
   return (data ?? []) as unknown as BusinessMembership[];
 }
+
+export type Business = {
+  id: string;
+  name: string;
+  email: string | null;
+  tone: string;
+  base_prompt: string;
+  address: string | null;
+  description: string | null;
+  ask_new_patient: boolean;
+};
+
+export async function getActiveBusiness(): Promise<Business> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("businesses")
+    .select(
+      "id, name, email, tone, base_prompt, address, description, ask_new_patient"
+    )
+    .limit(1)
+    .single();
+
+  if (error) throw error;
+  return data as Business;
+}
