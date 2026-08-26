@@ -59,3 +59,22 @@ export async function getBusinessHours(): Promise<BusinessHour[]> {
   if (error) throw error;
   return (data ?? []) as BusinessHour[];
 }
+
+export type Service = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+};
+
+export async function getServices(): Promise<Service[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("services")
+    .select("id, slug, name, description, duration_minutes")
+    .order("name");
+
+  if (error) throw error;
+  return (data ?? []) as Service[];
+}

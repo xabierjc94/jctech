@@ -175,3 +175,101 @@ export async function deleteBusinessHour(formData: FormData) {
 
   done("horarios");
 }
+
+const MAX_SERVICE_NAME_LENGTH = 100;
+const MAX_SERVICE_DESCRIPTION_LENGTH = 500;
+const MAX_DURATION_MINUTES = 600;
+
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+}
+
+export async function addService(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const durationMinutes = Number(formData.get("duration_minutes"));
+
+  if (!name || name.length > MAX_SERVICE_NAME_LENGTH) {
+    fail(
+      "servicios",
+      `El nombre debe tener entre 1 y ${MAX_SERVICE_NAME_LENGTH} caracteres.`
+    );
+  }
+
+  if (description.length > MAX_SERVICE_DESCRIPTION_LENGTH) {
+    fail(
+      "servicios",
+      `La descripción no puede superar ${MAX_SERVICE_DESCRIPTION_LENGTH} caracteres.`
+    );
+  }
+
+  if (
+    !Number.isInteger(durationMinutes) ||
+    durationMinutes <= 0 ||
+    durationMinutes > MAX_DURATION_MINUTES
+  ) {
+    fail(
+      "servicios",
+      `La duración debe estar entre 1 y ${MAX_DURATION_MINUTES} minutos.`
+    );
+  }
+
+  const slug = slugify(name);
+
+  if (!slug) {
+    fail("servicios", "El nombre debe contener al menos una letra o número.");
+  }
+
+  const supabase = await createClient();
+  const { data: business, error: readError } = await supabase
+    .from("businesses")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (readError || !business) {
+    fail("servicios", "No se pudo guardar. Inténtalo de nuevo.");
+  }
+
+  const { error } = await supabase.from("services").insert({
+    business_id: business.id,
+    slug,
+    name,
+    description: description || null,
+    duration_minutes: durationMinutes,
+  });
+
+  if (error) {
+    fail(
+      "servicios",
+      error.code === "23505"
+        ? "Ya existe un servicio con ese nombre."
+        : "No se pudo guardar. Inténtalo de nuevo."
+    );
+  }
+
+  done("servicios");
+}
+
+export async function deleteService(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+
+  if (!id) {
+    fail("servicios", "No se pudo eliminar el servicio.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("services").delete().eq("id", id);
+
+  if (error) {
+    fail("servicios", "No se pudo eliminar el servicio.");
+  }
+
+  done("servicios");
+}
