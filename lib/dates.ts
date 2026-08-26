@@ -43,9 +43,15 @@ function offsetMinutes(instant: Date): number {
   return (asIfUtc - instant.getTime()) / 60000;
 }
 
-// Instante UTC correspondiente a las 00:00 en Madrid del día indicado.
-function zonedMidnight(year: number, month: number, day: number): Date {
-  const guess = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+/** Instante UTC correspondiente a una hora local de Madrid. */
+export function zonedInstant(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0
+): Date {
+  const guess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
   const offset = offsetMinutes(guess);
   const adjusted = new Date(guess.getTime() - offset * 60000);
   // Segunda pasada: cubre los días de cambio de hora, en los que el
@@ -54,6 +60,10 @@ function zonedMidnight(year: number, month: number, day: number): Date {
   return secondOffset === offset
     ? adjusted
     : new Date(guess.getTime() - secondOffset * 60000);
+}
+
+function zonedMidnight(year: number, month: number, day: number): Date {
+  return zonedInstant(year, month, day);
 }
 
 const WEEKDAY_INDEX: Record<string, number> = {
@@ -104,4 +114,20 @@ export function formatShortDate(iso: string): string {
     day: "numeric",
     month: "short",
   }).format(new Date(iso));
+}
+
+/** Partes locales de Madrid de un instante: año, mes, día y día de semana 0=lunes. */
+export function zonedParts(instant: Date): {
+  year: number;
+  month: number;
+  day: number;
+  dayOfWeek: number;
+} {
+  const p = partsIn(instant);
+  return {
+    year: p.year,
+    month: p.month,
+    day: p.day,
+    dayOfWeek: WEEKDAY_INDEX[p.weekday] ?? 0,
+  };
 }
