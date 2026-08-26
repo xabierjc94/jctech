@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "seed": "node scripts/seed-demo.mjs"
+    "seed": "node scripts/seed-demo.mjs",
+    "whatsapp:creds": "node scripts/set-whatsapp-credentials.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",
