@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getConversation } from "@/lib/conversations";
+import { getActiveBusinessId } from "@/lib/business";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 
 function fail(conversationId: string, message: string): never {
   redirect(
@@ -93,8 +95,28 @@ export async function sendHumanMessage(formData: FormData) {
     fail(conversationId, "No se pudo enviar el mensaje.");
   }
 
-  // TODO (Fase 4): enviar también el mensaje por la WhatsApp Cloud API.
-  // Hasta entonces, el mensaje solo queda registrado en el panel.
+  // El envío por WhatsApp no debe tumbar el guardado: si Meta falla, el
+  // mensaje ya está registrado y se avisa al usuario.
+  const businessId = await getActiveBusinessId();
+
+  if (businessId) {
+    try {
+      await sendWhatsAppMessage({
+        businessId,
+        toPhone: conversation.contact_phone,
+        text: content,
+      });
+    } catch (error) {
+      // Sin esto, un fallo de envío sería invisible en producción. El mensaje
+      // de error de sendWhatsAppMessage no incluye el token.
+      console.error("Fallo al enviar por WhatsApp:", error);
+      revalidatePath("/conversaciones");
+      fail(
+        conversationId,
+        "El mensaje se guardó, pero no se pudo enviar por WhatsApp."
+      );
+    }
+  }
 
   revalidatePath("/conversaciones");
   revalidatePath("/dashboard");
