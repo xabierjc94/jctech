@@ -14,16 +14,20 @@ export function SubmitButton({
   children,
   pendingText,
   className,
+  formAction,
 }: {
   children: React.ReactNode;
   pendingText?: string;
   className?: string;
+  /** Para formularios con varios botones que disparan acciones distintas. */
+  formAction?: (formData: FormData) => void | Promise<void>;
 }) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
+      formAction={formAction}
       disabled={pending}
       aria-busy={pending}
       className={`${className ?? ""} disabled:cursor-not-allowed disabled:opacity-60`}
