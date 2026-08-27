@@ -3,6 +3,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { findAvailableSlots, MAX_LOOKAHEAD_DAYS } from "@/lib/agent/availability";
 import { formatDateTime } from "@/lib/dates";
 import type { BusinessHour, Service } from "@/lib/business";
+import { getAccessToken } from "@/lib/google/tokens";
+import { createEvent, fetchBusy } from "@/lib/google/calendar";
 
 const MAX_SLOTS_OFFERED = 3;
 
@@ -74,6 +76,11 @@ export type ToolOutcome = {
   handoff?: boolean;
 };
 
+/**
+ * Franjas ocupadas del negocio. Google Calendar es la fuente de verdad cuando
+ * está conectado, porque recoge también lo que el negocio apunta a mano fuera
+ * del panel. Sin Google, se usan las citas locales.
+ */
 async function loadBusy(businessId: string, from: Date): Promise<
   { starts_at: string; ends_at: string }[]
 > {
@@ -81,6 +88,30 @@ async function loadBusy(businessId: string, from: Date): Promise<
   const until = new Date(
     from.getTime() + MAX_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000
   );
+
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("google_calendar_connected, google_calendar_id")
+    .eq("id", businessId)
+    .limit(1);
+
+  if (business?.[0]?.google_calendar_connected) {
+    const accessToken = await getAccessToken(businessId);
+
+    if (accessToken) {
+      try {
+        return await fetchBusy({
+          accessToken,
+          calendarId: (business[0].google_calendar_id as string) ?? "primary",
+          from,
+          to: until,
+        });
+      } catch {
+        // Si Google falla, es mejor ofrecer huecos según las citas locales que
+        // dejar al cliente sin respuesta.
+      }
+    }
+  }
 
   const { data, error } = await supabase
     .from("appointments")
@@ -177,6 +208,40 @@ export async function runTool(
     }
 
     const supabase = createServiceClient();
+
+    // El evento se crea antes de guardar en local para poder registrar su id.
+    // Si Google falla, la cita se guarda igual: perderla sería peor que tenerla
+    // solo en el panel, y la sincronización posterior no la duplicará porque
+    // lleva google_event_id nulo.
+    let googleEventId: string | null = null;
+
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("google_calendar_connected, google_calendar_id")
+      .eq("id", context.businessId)
+      .limit(1);
+
+    if (business?.[0]?.google_calendar_connected) {
+      const accessToken = await getAccessToken(context.businessId);
+
+      if (accessToken) {
+        try {
+          googleEventId = await createEvent({
+            accessToken,
+            calendarId: (business[0].google_calendar_id as string) ?? "primary",
+            summary: `${service.name} — ${String(args.nombre ?? "")}`,
+            description: context.contactPhone
+              ? `Reservado por el agente. Teléfono: ${context.contactPhone}`
+              : "Reservado por el agente.",
+            startsAt,
+            endsAt,
+          });
+        } catch {
+          // Se sigue adelante: la cita queda en el panel aunque Google falle.
+        }
+      }
+    }
+
     const { error } = await supabase.from("appointments").insert({
       business_id: context.businessId,
       conversation_id: context.conversationId,
@@ -186,13 +251,13 @@ export async function runTool(
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
       status: "confirmada",
+      google_event_id: googleEventId,
+      source: "agente",
     });
 
     if (error) {
       return { content: "No se pudo guardar la cita. Pide disculpas y ofrece otra hora." };
     }
-
-    // TODO (Fase 5): crear también el evento en Google Calendar.
 
     return {
       content: `Cita confirmada: ${service.name} el ${formatDateTime(startsAt)}.`,
