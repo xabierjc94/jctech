@@ -1,7 +1,7 @@
+import { redirect } from "next/navigation";
+
+// La raíz no tiene contenido propio: el panel vive bajo /dashboard, que a su
+// vez redirige a /login o a /onboarding según el estado del usuario.
 export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-3xl">JC Tech — Panel</h1>
-    </main>
-  );
+  redirect("/dashboard");
 }
