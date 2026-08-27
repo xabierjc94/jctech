@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { todayRange, weekRange, daysAgo } from "@/lib/dates";
+import {
+  todayRange,
+  weekRange,
+  daysAgo,
+  monthRange,
+  daysInMonth,
+  firstWeekdayOfMonth,
+  dayOfMonth,
+  monthName,
+} from "@/lib/dates";
 
 describe("todayRange", () => {
   it("usa el día de Madrid, no el de UTC, justo después de medianoche", () => {
@@ -47,5 +56,45 @@ describe("daysAgo", () => {
   it("resta días naturales", () => {
     const result = daysAgo(30, new Date("2026-06-15T12:00:00Z"));
     expect(result.toISOString()).toBe("2026-05-16T12:00:00.000Z");
+  });
+});
+
+describe("utilidades de mes", () => {
+  it("monthRange cubre el mes entero en hora de Madrid", () => {
+    // Junio de 2026: del 1 al 30. En verano Madrid es UTC+2.
+    const { from, to } = monthRange(2026, 6);
+    expect(from.toISOString()).toBe("2026-05-31T22:00:00.000Z");
+    expect(to.toISOString()).toBe("2026-06-30T22:00:00.000Z");
+  });
+
+  it("monthRange cruza el cambio de año", () => {
+    const { from, to } = monthRange(2026, 12);
+    // Diciembre es invierno: UTC+1.
+    expect(from.toISOString()).toBe("2026-11-30T23:00:00.000Z");
+    expect(to.toISOString()).toBe("2026-12-31T23:00:00.000Z");
+  });
+
+  it("daysInMonth conoce los meses cortos y los bisiestos", () => {
+    expect(daysInMonth(2026, 1)).toBe(31);
+    expect(daysInMonth(2026, 2)).toBe(28);
+    expect(daysInMonth(2024, 2)).toBe(29);
+    expect(daysInMonth(2026, 4)).toBe(30);
+  });
+
+  it("firstWeekdayOfMonth usa 0 = lunes", () => {
+    // 1 de junio de 2026 es lunes.
+    expect(firstWeekdayOfMonth(2026, 6)).toBe(0);
+    // 1 de agosto de 2026 es sábado.
+    expect(firstWeekdayOfMonth(2026, 8)).toBe(5);
+  });
+
+  it("dayOfMonth usa el día de Madrid, no el de UTC", () => {
+    // 22:30 UTC del 15 de junio son las 00:30 del 16 en Madrid.
+    expect(dayOfMonth(new Date("2026-06-15T22:30:00Z"))).toBe(16);
+  });
+
+  it("monthName devuelve el nombre en español", () => {
+    expect(monthName(1)).toBe("Enero");
+    expect(monthName(12)).toBe("Diciembre");
   });
 });

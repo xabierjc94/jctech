@@ -143,3 +143,45 @@ export function formatDateTime(instant: Date): string {
     minute: "2-digit",
   }).format(instant);
 }
+
+/** Primer y último instante (exclusivo) de un mes de Madrid. */
+export function monthRange(year: number, month: number): { from: Date; to: Date } {
+  return {
+    from: zonedInstant(year, month, 1),
+    to: zonedInstant(year, month + 1, 1),
+  };
+}
+
+/** Mes actual en Madrid, como {year, month} con month 1-12. */
+export function currentMonth(now: Date = new Date()): {
+  year: number;
+  month: number;
+} {
+  const p = zonedParts(now);
+  return { year: p.year, month: p.month };
+}
+
+/** Día del mes (1-31) de un instante, en hora de Madrid. */
+export function dayOfMonth(instant: Date): number {
+  return zonedParts(instant).day;
+}
+
+/** Índice del día de la semana (0 = lunes) del día 1 de ese mes. */
+export function firstWeekdayOfMonth(year: number, month: number): number {
+  return zonedParts(zonedInstant(year, month, 1)).dayOfWeek;
+}
+
+/** Número de días que tiene un mes. */
+export function daysInMonth(year: number, month: number): number {
+  // El día 0 del mes siguiente es el último del actual.
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+export function monthName(month: number): string {
+  return MONTH_NAMES[month - 1] ?? "";
+}
