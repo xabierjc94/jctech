@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Tabs, isTabId, type TabId } from "./tabs";
 import {
   getActiveBusiness,
@@ -25,10 +26,20 @@ export default async function PersonalizacionPage({
 
   return (
     <>
-      <h1 className="mb-1 text-2xl">Personalización</h1>
-      <p className="mb-6 text-tinta-suave">
-        Configura cómo se comporta tu agente y qué sabe de tu negocio.
-      </p>
+      <div className="mb-6 flex items-baseline justify-between">
+        <div>
+          <h1 className="mb-1 text-2xl">Personalización</h1>
+          <p className="text-tinta-suave">
+            Configura cómo se comporta tu agente y qué sabe de tu negocio.
+          </p>
+        </div>
+        <Link
+          href="/personalizacion/probar"
+          className="border border-tinta px-4 py-2 text-sm"
+        >
+          Probar agente
+        </Link>
+      </div>
 
       <Tabs active={active} />
 
