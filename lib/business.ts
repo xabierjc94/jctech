@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { readActiveBusinessId } from "@/lib/active-business";
 
@@ -7,7 +8,7 @@ export type BusinessMembership = {
   businesses: { id: string; name: string };
 };
 
-export async function getUserBusinesses(): Promise<BusinessMembership[]> {
+export const getUserBusinesses = cache(async function getUserBusinesses(): Promise<BusinessMembership[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("business_members")
@@ -15,7 +16,7 @@ export async function getUserBusinesses(): Promise<BusinessMembership[]> {
 
   if (error) throw error;
   return (data ?? []) as unknown as BusinessMembership[];
-}
+});
 
 export type Business = {
   id: string;
@@ -31,7 +32,7 @@ export type Business = {
 const BUSINESS_COLUMNS =
   "id, name, email, tone, base_prompt, address, description, ask_new_patient";
 
-export async function getActiveBusiness(): Promise<Business> {
+export const getActiveBusiness = cache(async function getActiveBusiness(): Promise<Business> {
   const supabase = await createClient();
   const activeId = await readActiveBusinessId();
 
@@ -57,14 +58,14 @@ export async function getActiveBusiness(): Promise<Business> {
   if (!data || data.length === 0) throw new Error("Sin negocio activo");
 
   return data[0] as Business;
-}
+});
 
 /**
  * Id del negocio activo, resuelto igual que `getActiveBusiness` pero sin traer
  * la fila entera. Devuelve `null` en vez de lanzar, para que las Server Actions
  * puedan responder con su propio mensaje de error.
  */
-export async function getActiveBusinessId(): Promise<string | null> {
+export const getActiveBusinessId = cache(async function getActiveBusinessId(): Promise<string | null> {
   const supabase = await createClient();
   const activeId = await readActiveBusinessId();
 
@@ -89,7 +90,7 @@ export async function getActiveBusinessId(): Promise<string | null> {
   if (error || !data || data.length === 0) return null;
 
   return data[0].id as string;
-}
+});
 
 export type BusinessHour = {
   id: string;

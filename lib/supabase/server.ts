@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-export async function createClient() {
+// `cache` memoiza durante una única petición: todas las lecturas de una misma
+// página comparten cliente en vez de construir uno nuevo cada vez.
+export const createClient = cache(async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -25,4 +28,4 @@ export async function createClient() {
       },
     }
   );
-}
+});

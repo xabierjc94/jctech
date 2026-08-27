@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/business";
 
@@ -39,7 +40,7 @@ export async function getConversations(
   return (data ?? []) as Conversation[];
 }
 
-export async function getConversation(
+export const getConversation = cache(async function getConversation(
   id: string
 ): Promise<Conversation | null> {
   const businessId = await getActiveBusinessId();
@@ -55,7 +56,7 @@ export async function getConversation(
 
   if (error) throw error;
   return (data?.[0] as Conversation) ?? null;
-}
+});
 
 export async function getMessages(conversationId: string): Promise<Message[]> {
   // La conversación se resuelve primero para confirmar que pertenece al

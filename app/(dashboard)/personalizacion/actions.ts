@@ -158,8 +158,20 @@ export async function deleteBusinessHour(formData: FormData) {
     fail("horarios", "No se pudo eliminar el rango.");
   }
 
+  const businessId = await getActiveBusinessId();
+
+  if (!businessId) {
+    fail("horarios", "No se pudo eliminar el rango.");
+  }
+
+  // Acotar al negocio activo: RLS impide tocar otro negocio, pero un usuario
+  // con varios podría borrar del que no tiene abierto.
   const supabase = await createClient();
-  const { error } = await supabase.from("business_hours").delete().eq("id", id);
+  const { error } = await supabase
+    .from("business_hours")
+    .delete()
+    .eq("id", id)
+    .eq("business_id", businessId);
 
   if (error) {
     fail("horarios", "No se pudo eliminar el rango.");
@@ -253,8 +265,18 @@ export async function deleteService(formData: FormData) {
     fail("servicios", "No se pudo eliminar el servicio.");
   }
 
+  const businessId = await getActiveBusinessId();
+
+  if (!businessId) {
+    fail("servicios", "No se pudo eliminar el servicio.");
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.from("services").delete().eq("id", id);
+  const { error } = await supabase
+    .from("services")
+    .delete()
+    .eq("id", id)
+    .eq("business_id", businessId);
 
   if (error) {
     fail("servicios", "No se pudo eliminar el servicio.");
