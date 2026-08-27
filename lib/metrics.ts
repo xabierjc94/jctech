@@ -24,47 +24,26 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const today = todayRange();
   const week = weekRange();
 
-  const [conversations30d, appointmentsThisWeek, appointmentsToday, pausedBots] =
-    await Promise.all([
-      supabase
-        .from("conversations")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", businessId)
-        .gte("last_message_at", daysAgo(30).toISOString()),
-      supabase
-        .from("appointments")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", businessId)
-        .neq("status", "cancelada")
-        .gte("starts_at", week.from.toISOString())
-        .lt("starts_at", week.to.toISOString()),
-      supabase
-        .from("appointments")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", businessId)
-        .neq("status", "cancelada")
-        .gte("starts_at", today.from.toISOString())
-        .lt("starts_at", today.to.toISOString()),
-      supabase
-        .from("conversations")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", businessId)
-        .eq("bot_active", false),
-    ]);
+  // Los cuatro recuentos se resuelven en una sola llamada: antes eran cuatro
+  // consultas independientes, cada una con su viaje de red.
+  const { data, error } = await supabase.rpc("dashboard_metrics", {
+    p_business_id: businessId,
+    p_since: daysAgo(30).toISOString(),
+    p_week_from: week.from.toISOString(),
+    p_week_to: week.to.toISOString(),
+    p_today_from: today.from.toISOString(),
+    p_today_to: today.to.toISOString(),
+  });
 
-  for (const result of [
-    conversations30d,
-    appointmentsThisWeek,
-    appointmentsToday,
-    pausedBots,
-  ]) {
-    if (result.error) throw result.error;
-  }
+  if (error) throw error;
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_METRICS;
 
   return {
-    conversations30d: conversations30d.count ?? 0,
-    appointmentsThisWeek: appointmentsThisWeek.count ?? 0,
-    appointmentsToday: appointmentsToday.count ?? 0,
-    pausedBots: pausedBots.count ?? 0,
+    conversations30d: Number(row.conversations_30d ?? 0),
+    appointmentsThisWeek: Number(row.appointments_this_week ?? 0),
+    appointmentsToday: Number(row.appointments_today ?? 0),
+    pausedBots: Number(row.paused_bots ?? 0),
   };
 }
