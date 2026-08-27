@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-export const AGENT_MODEL = "claude-opus-5";
+export const AGENT_MODEL = "claude-sonnet-5";
 
 // Respuestas de WhatsApp: cortas y con baja latencia. El esfuerzo es lo que
 // se ajusta si el agente se queda corto razonando sobre disponibilidad.
