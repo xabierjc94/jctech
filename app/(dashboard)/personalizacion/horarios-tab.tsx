@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/submit-button";
 import type { BusinessHour } from "@/lib/business";
 import { addBusinessHour, deleteBusinessHour } from "./actions";
 
@@ -60,12 +61,12 @@ export function HorariosTab({ hours }: { hours: BusinessHour[] }) {
                 defaultValue="18:00"
                 className="border border-tinta bg-hueso px-2 py-1"
               />
-              <button
-                type="submit"
+              <SubmitButton
                 className="border border-tinta px-3 py-1 text-sm"
+                pendingText="Agregando…"
               >
                 Agregar rango
-              </button>
+              </SubmitButton>
             </form>
           </div>
         );

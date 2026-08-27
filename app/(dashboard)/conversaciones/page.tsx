@@ -3,6 +3,7 @@ import {
   getConversations,
   getMessages,
 } from "@/lib/conversations";
+import { SubmitButton } from "@/components/submit-button";
 import { ConversationList } from "./conversation-list";
 import { MessageThread } from "./message-thread";
 import { BotToggle } from "./bot-toggle";
@@ -77,9 +78,12 @@ export default async function ConversacionesPage({
                 placeholder="Escribe una respuesta…"
                 className="flex-1 border border-tinta bg-hueso px-3 py-2"
               />
-              <button type="submit" className="bg-tinta px-4 py-2 text-hueso">
+              <SubmitButton
+                className="bg-tinta px-4 py-2 text-hueso"
+                pendingText="Enviando…"
+              >
                 Enviar
-              </button>
+              </SubmitButton>
             </form>
           </>
         )}

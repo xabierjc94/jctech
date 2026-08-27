@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/submit-button";
 import { createBusiness } from "./actions";
 
 export default async function OnboardingPage({
@@ -30,9 +31,12 @@ export default async function OnboardingPage({
           maxLength={100}
           className="border border-tinta bg-hueso px-3 py-2"
         />
-        <button type="submit" className="bg-tinta px-4 py-2 text-hueso">
+        <SubmitButton
+          className="bg-tinta px-4 py-2 text-hueso"
+          pendingText="Creando…"
+        >
           Crear negocio
-        </button>
+        </SubmitButton>
       </form>
     </main>
   );
