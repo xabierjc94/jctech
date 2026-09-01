@@ -1,5 +1,8 @@
 import { getIntegrationsStatus } from "@/lib/integrations";
+import { createClient } from "@/lib/supabase/server";
+import { getInvitations, getMyRole, getTeamMembers } from "@/lib/team";
 import { ConexionesTab } from "./conexiones-tab";
+import { EquipoTab } from "./equipo-tab";
 import { Tabs, isTabId, type TabId } from "./tabs";
 
 export default async function IntegracionesPage({
@@ -11,6 +14,16 @@ export default async function IntegracionesPage({
   const active: TabId = isTabId(params.tab) ? params.tab : "conexiones";
 
   const status = await getIntegrationsStatus();
+
+  const [members, invitations, myRole] =
+    active === "equipo"
+      ? await Promise.all([getTeamMembers(), getInvitations(), getMyRole()])
+      : [[], [], null];
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <>
@@ -35,7 +48,12 @@ export default async function IntegracionesPage({
 
       {active === "conexiones" && <ConexionesTab status={status} />}
       {active === "equipo" && (
-        <p className="text-tinta-suave">Pestaña: {active}</p>
+        <EquipoTab
+          members={members}
+          invitations={invitations}
+          myRole={myRole}
+          myUserId={user?.id ?? null}
+        />
       )}
     </>
   );
