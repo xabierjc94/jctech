@@ -10,9 +10,21 @@ export type BusinessMembership = {
 
 export const getUserBusinesses = cache(async function getUserBusinesses(): Promise<BusinessMembership[]> {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  // Filtrar por user_id es imprescindible: RLS deja ver TODAS las membresías
+  // de los negocios a los que perteneces (lo necesita la pantalla de Equipo),
+  // así que sin este filtro un negocio con dos miembros devolvería dos filas
+  // del mismo negocio y el panel creería que el usuario tiene dos negocios.
   const { data, error } = await supabase
     .from("business_members")
-    .select("business_id, role, businesses(id, name)");
+    .select("business_id, role, businesses(id, name)")
+    .eq("user_id", user.id);
 
   if (error) throw error;
   return (data ?? []) as unknown as BusinessMembership[];
