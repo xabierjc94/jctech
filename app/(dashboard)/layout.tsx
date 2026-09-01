@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUserBusinesses } from "@/lib/business";
 import { readActiveBusinessId } from "@/lib/active-business";
+import { createClient } from "@/lib/supabase/server";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -16,6 +17,11 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Una invitación pendiente se convierte en membresía en cuanto el invitado
+  // entra. Es barato (una llamada) y evita una pantalla de "aceptar" extra.
+  const supabase = await createClient();
+  await supabase.rpc("accept_invitations");
+
   const businesses = await getUserBusinesses();
 
   if (businesses.length === 0) {
