@@ -109,6 +109,9 @@ export async function listEvents({
     singleEvents: "true",
     orderBy: "startTime",
     maxResults: "250",
+    // Sin esto Google omite los eventos borrados en vez de devolverlos con
+    // status "cancelled", y la cita local se quedaría confirmada para siempre.
+    showDeleted: "true",
   });
 
   const response = await fetch(

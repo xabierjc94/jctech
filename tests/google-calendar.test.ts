@@ -94,6 +94,15 @@ describe("listEvents", () => {
     expect(eventos[0].cancelled).toBe(true);
   });
 
+  it("pide a Google que incluya los borrados, o nunca llegarían cancelados", async () => {
+    responderCon({});
+    await listEvents(args);
+
+    const [url] = (globalThis.fetch as unknown as { mock: { calls: [string][] } })
+      .mock.calls[0];
+    expect(new URL(url).searchParams.get("showDeleted")).toBe("true");
+  });
+
   it("acepta eventos sin título", async () => {
     responderCon({
       items: [

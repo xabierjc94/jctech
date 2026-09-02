@@ -61,30 +61,67 @@ export async function syncFromGoogle(
     return false;
   }
 
-  for (const event of events) {
-    if (event.cancelled) {
-      await supabase
-        .from("appointments")
-        .update({ status: "cancelada" })
-        .eq("business_id", businessId)
-        .eq("google_event_id", event.id);
-      continue;
-    }
+  // Todo va en lotes: con una escritura por evento, un calendario normal de
+  // medio centenar de eventos tardaba diez segundos, y la pantalla de Citas
+  // esperaba a que terminara.
+  const cancelled = events.filter((e) => e.cancelled).map((e) => e.id);
+  const active = events.filter((e) => !e.cancelled);
 
-    // El índice único (business_id, google_event_id) hace que esto actualice
-    // en vez de duplicar cuando el evento ya se conocía.
-    await supabase.from("appointments").upsert(
-      {
-        business_id: businessId,
-        google_event_id: event.id,
-        contact_name: event.summary,
-        starts_at: event.startsAt,
-        ends_at: event.endsAt,
-        status: "confirmada",
-        source: "google",
-      },
-      { onConflict: "business_id,google_event_id" }
-    );
+  // Las citas que agendó el agente ya tienen su evento en Google. Para ellas se
+  // conservan el nombre del cliente y el origen; solo se refrescan hora y estado.
+  const { data: agentRows } = await supabase
+    .from("appointments")
+    .select("google_event_id")
+    .eq("business_id", businessId)
+    .eq("source", "agente")
+    .not("google_event_id", "is", null);
+
+  const bookedByAgent = new Set(
+    (agentRows ?? []).map((r) => r.google_event_id as string)
+  );
+
+  const fromGoogle = active
+    .filter((e) => !bookedByAgent.has(e.id))
+    .map((e) => ({
+      business_id: businessId,
+      google_event_id: e.id,
+      contact_name: e.summary,
+      starts_at: e.startsAt,
+      ends_at: e.endsAt,
+      status: "confirmada",
+      source: "google",
+    }));
+
+  const fromAgent = active
+    .filter((e) => bookedByAgent.has(e.id))
+    .map((e) => ({
+      business_id: businessId,
+      google_event_id: e.id,
+      starts_at: e.startsAt,
+      ends_at: e.endsAt,
+      status: "confirmada",
+    }));
+
+  if (cancelled.length > 0) {
+    await supabase
+      .from("appointments")
+      .update({ status: "cancelada" })
+      .eq("business_id", businessId)
+      .in("google_event_id", cancelled);
+  }
+
+  // El índice único (business_id, google_event_id) hace que esto actualice
+  // en vez de duplicar cuando el evento ya se conocía.
+  if (fromGoogle.length > 0) {
+    await supabase
+      .from("appointments")
+      .upsert(fromGoogle, { onConflict: "business_id,google_event_id" });
+  }
+
+  if (fromAgent.length > 0) {
+    await supabase
+      .from("appointments")
+      .upsert(fromAgent, { onConflict: "business_id,google_event_id" });
   }
 
   await supabase
