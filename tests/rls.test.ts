@@ -58,8 +58,12 @@ describe("aislamiento RLS entre negocios", () => {
   });
 
   afterAll(async () => {
-    // Borrar el usuario arrastra su negocio y su membresía por cascada.
+    // Borrar el usuario solo arrastra su membresía: `businesses` no apunta al
+    // usuario, así que el negocio hay que borrarlo aparte o queda huérfano.
     for (const user of [a, b]) {
+      if (user?.businessId) {
+        await admin.from("businesses").delete().eq("id", user.businessId);
+      }
       if (user?.userId) await admin.auth.admin.deleteUser(user.userId);
     }
   });
